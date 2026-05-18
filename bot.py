@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import requests
+import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -19,7 +20,7 @@ app = Flask('')
 def home():
     return "Bot is active and running!"
 
-# --- 3. جلب مواقيت الصلاة لبغداد أوتوماتيكياً ---
+# --- 3. جلب مواقيت الصلاة لبغداد ---
 def get_baghdad_prayer_times():
     try:
         url = "http://api.aladhan.com/v1/timingsByCity?city=Baghdad&country=Iraq&method=4"
@@ -85,10 +86,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'dhikr_count':
         await query.answer(text="✨ تقبل الله طاعتك وغفر ذنبك ورزقك من حيث لا تحتسب ✅", show_alert=True)
 
-# --- 6. دالة تشغيل البوت في الخلفية بشكل مستقل منفرداً ---
+# --- 6. دالة تشغيل البوت القياسية والمستقرة ---
 def run_bot():
-    # إنشاء الـ Loop الخاص بالـ Thread الجديد لتجنب أي تضارب برمي حديث
-    import asyncio
+    # إنشاء حلقة أحداث جديدة ونظيفة متوافقة مع بايثون 3.10
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
@@ -97,14 +97,13 @@ def run_bot():
     application.add_handler(CallbackQueryHandler(button_click))
     
     logging.info("⚡ البوت الفخم يستعد للاستماع للرسائل...")
+    # تشغيل البولينج القياسي المستقر
     application.run_polling(close_loop=False, drop_pending_updates=True)
 
-# --- 7. تشغيل البوت تلقائياً عند استدعاء الملف عبر gunicorn ---
-# نقوم بإطلاق الـ Thread الخاص بالبوت فوراً ليعمل في الخلفية تماماً
+# --- 7. تشغيل البوت تلقائياً في الخلفية تماماً عند استدعاء gunicorn ---
 bot_thread = threading.Thread(target=run_bot, daemon=True)
 bot_thread.start()
 
 if __name__ == '__main__':
-    # للتشغيل المحلي فقط في حال احتجته
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
