@@ -10,7 +10,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # --- 1. إعداد السجلات ومراقبة البوت ---
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# التوكن الخاص ببوتك تلقائياً
+# التوكن الجديد والمستقر الخاص بك
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 
 # --- 2. إعداد خادم الويب (Flask) ---
@@ -98,10 +98,17 @@ def run_bot():
     logging.info("⚡ البوت الفخم يستعد للاستماع للرسائل...")
     application.run_polling(close_loop=False, drop_pending_updates=True)
 
-# --- 7. إجبار البوت على الإقلاع فوراً عند تشغيل خادم الويب (gunicorn) ---
-if not any(t.name == "DhikrBotThread" for t in threading.enumerate()):
+# --- 7. حماية الـ Thread من التكرار والتشغيل الآمن ---
+def start_bot_thread():
+    for t in threading.enumerate():
+        if t.name == "DhikrBotThread" and t.is_alive():
+            logging.info("📢 البوت شغال بالفعل بالخلفية، لن نكرر التوصيل.")
+            return
     bot_thread = threading.Thread(target=run_bot, name="DhikrBotThread", daemon=True)
     bot_thread.start()
+
+# تشغيل البوت فوراً وبأمان
+start_bot_thread()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))
