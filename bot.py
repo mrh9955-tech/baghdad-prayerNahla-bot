@@ -1,8 +1,6 @@
 import logging
 import os
-import threading
 import requests
-import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -10,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # --- 1. إعداد السجلات ومراقبة البوت ---
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# التوكن الجديد والمستقر الخاص بك
+# التوكن الجديد والنزيه مالتك
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 
 # --- 2. إعداد خادم الويب (Flask) ---
@@ -18,7 +16,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is active and running!"
+    return "Bot is active and running smoothly!"
 
 # --- 3. جلب مواقيت الصلاة لبغداد ---
 def get_baghdad_prayer_times():
@@ -86,30 +84,22 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'dhikr_count':
         await query.answer(text="✨ تقبل الله طاعتك وغفر ذنبك ورزقك من حيث لا تحتسب ✅", show_alert=True)
 
-# --- 6. دالة تشغيل البوت القياسية والمستقرة ---
-def run_bot():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+# --- 6. دالة التشغيل الرئيسية المزدوجة ---
+if __name__ == '__main__':
+    # أخذ المنفذ الخاص بـ Render
+    port = int(os.environ.get("PORT", 8080))
     
+    # 1. بناء وتجهيز تطبيق التليكرام
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    logging.info("⚡ البوت الفخم يستعد للاستماع للرسائل...")
-    application.run_polling(close_loop=False, drop_pending_updates=True)
-
-# --- 7. حماية الـ Thread من التكرار والتشغيل الآمن ---
-def start_bot_thread():
-    for t in threading.enumerate():
-        if t.name == "DhikrBotThread" and t.is_alive():
-            logging.info("📢 البوت شغال بالفعل بالخلفية، لن نكرر التوصيل.")
-            return
-    bot_thread = threading.Thread(target=run_bot, name="DhikrBotThread", daemon=True)
-    bot_thread.start()
-
-# تشغيل البوت فوراً وبأمان
-start_bot_thread()
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    # 2. تشغيل الويب ويبدأ الاستماع في الخلفية أوتوماتيكياً عبر بيئة بايثون المستقرة
+    import threading
+    web_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, use_reloader=False))
+    web_thread.daemon = True
+    web_thread.start()
+    
+    # 3. تشغيل البوت ليكون هو الواجهة القائدة للسيرفر
+    logging.info("🚀 السيرفر الفخم انطلق والبوت يستمع الآن بنجاح وبدون وسيط...")
+    application.run_polling(drop_pending_updates=True)
