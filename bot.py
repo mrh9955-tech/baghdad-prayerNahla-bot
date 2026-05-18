@@ -91,3 +91,20 @@ def main():
 
 if __name__ == '__main__':
     main()
+    from flask import Flask
+import threading
+import os
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running perfectly!"
+
+def run_web_server():
+    # Render يحدد المنفذ تلقائياً عبر متغيرات البيئة
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# تشغيل خادم الويب في خلفية منفصلة لكي لا يعطل البوت
+threading.Thread(target=run_web_server).start()
