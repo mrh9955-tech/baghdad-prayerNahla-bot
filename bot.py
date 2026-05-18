@@ -1,27 +1,27 @@
 import logging
 import os
-import threading
+import asyncio
 import requests
-from flask import Flask
+from quart import Quart
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# 1. خادم الويب لـ Render
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is running perfectly!"
-
-def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# 2. إعدادات السجلات والتوكن
+# --- 1. إعداد السجلات ومراقبة البوت ---
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# التوكن الخاص ببوتك
 TOKEN = "8804058766:AAE2rc5Fh5H8oGuJM6KV1P1-NwREE5bvRk4"
 
-# 3. جلب مواقيت الصلاة لبغداد
+# --- 2. إعداد خادم الويب الحديث (Quart) المتوافق مع نظام Async ---
+app = Quart('')
+
+@app.route('/')
+async def home():
+    return "Bot is running perfectly on Render!"
+
+# --- 3. دالة جلب مواقيت الصلاة لبغداد ---
 def get_baghdad_prayer_times():
     try:
         url = "http://api.aladhan.com/v1/timingsByCity?city=Baghdad&country=Iraq&method=4"
@@ -38,7 +38,7 @@ def get_baghdad_prayer_times():
         logging.error(f"Error fetching times: {e}")
         return None
 
-# 4. أمر البداية
+# --- 4. دالة أمر البداية /start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     welcome_text = (
@@ -52,7 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
-# 5. الأزرار
+# --- 5. دالة الأزرار التفاعلية ---
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -87,15 +87,31 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'dhikr_count':
         await query.answer(text="✨ تقبل الله طاعتك وغفر ذنبك ورزقك من حيث لا تحتسب ✅", show_alert=True)
 
-# 6. الدالة الأساسية
-def main():
+# --- 6. الدالة التشغيلية الكبرى لتشغيل الويب والبوت معاً بسلاسة ---
+async def main():
+    # بناء تطبيق البوت
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click))
-    print("⚡ Bot is running successfully...")
-    application.run_polling(timeout=60, read_timeout=60, write_timeout=60)
 
-# 7. نقطة الانطلاق لـ Render
+    # إعدادات خادم الويب لـ Render
+    config = Config()
+    config.bind = [f"0.0.0.0:{os.environ.get('PORT', '8080')}"]
+    
+    logging.info("🚀 تشغيل البوت وسيرفر الويب معاً بنظام الـ Async الحديث...")
+    
+    # تشغيل سيرفر الويب والبوت في نفس الوقت بدون أي تضارب نهائياً
+    await asyncio.gather(
+        serve(app, config),
+        application.initialize(),
+        application.start(),
+        application.updater.start_polling(timeout=60, read_timeout=60, write_timeout=60)
+    )
+    
+    # إبقاء البرنامج يعمل في الخلفية
+    while True:
+        await asyncio.sleep(3600)
+
 if __name__ == '__main__':
-    threading.Thread(target=run_web_server, daemon=True).start()
-    main()
+    # تشغيل النظام المتكامل
+    asyncio.run(main())
