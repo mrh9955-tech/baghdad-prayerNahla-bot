@@ -1,16 +1,33 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+import os
+import threading
 import requests
 from datetime import datetime
+from flask import Flask
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# إعداد السجلات لمراقبة عمل البوت
+# --- 1. إعداد خادم الويب (Flask) لـ Render في البداية ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running perfectly!"
+
+def run_web_server():
+    # Render يحدد المنفذ تلقائياً عبر متغيرات البيئة
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+
+# --- 2. إعداد السجلات ومراقبة عمل البوت ---
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# التوكن الخاص ببوتك تم وضعه هنا تلقائياً بناءً على الصورة
+# التوكن الخاص ببوتك
 TOKEN = "8804058766:AAE2rc5Fh5H8oGuJM6KV1P1-NwREE5bvRk4"
 
-# دالة لجلب مواقيت الصلاة الحقيقية لمدينة بغداد أوتوماتيكياً
+
+# --- 3. دالة جلب مواقيت الصلاة الحقيقية لبغداد ---
 def get_baghdad_prayer_times():
     try:
         # استدعاء مواقيت بغداد من قاعدة بيانات المواقيت العالمية
@@ -28,7 +45,8 @@ def get_baghdad_prayer_times():
         logging.error(f"خطأ في جلب المواقيت: {e}")
         return None
 
-# واجهة الأزرار الرئيسية الفخمة التي تظهر للمستخدم
+
+# --- 4. واجهة الأزرار الرئيسية ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     welcome_text = (
@@ -43,7 +61,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
-# دالة التعامل مع ضغطات الأزرار
+
+# --- 5. دالة التعامل مع ضغطات الأزرار ---
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -77,34 +96,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text=azkar_text, parse_mode="Markdown", reply_markup=reply_markup)
 
     elif query.data == 'dhikr_count':
-        # ميزة العداد الذكي: تظهر رسالة منبثقة سريعة تختفي تلقائياً تفاعلية فخمة
         await query.answer(text="✨ تقبل الله طاعتك وغفر ذنبك ورزقك من حيث لا تحتسب ✅", show_alert=True)
 
-# تشغيل البوت
+
+# --- 6. الدالة الأساسية لتشغيل البوت ---
 def main():
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    print("⚡ البوت الفخم يعمل الآن بنجاح ومستعد لاستقبال الأوامر...")
+    print("⚡ البوت الفخم يعمل الآن بنجاح ومستعد استقبال الأوامر...")
     application.run_polling(timeout=60, read_timeout=60, write_timeout=60)
 
+
+# --- 7. نقطة انطلاق البرنامج بالترتيب الصحيح لـ Render ---
 if __name__ == '__main__':
+    # أولوية أولى: تشغيل خادم الويب في خلفية منفصلة فوراً ليستجيب لـ Render
+    threading.Thread(target=run_web_server, daemon=True).start()
+    
+    # أولوية ثانية: تشغيل البوت ليبقى مستمراً في العمل واستقبال الرسائل
     main()
-    from flask import Flask
-import threading
-import os
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is running perfectly!"
-
-def run_web_server():
-    # Render يحدد المنفذ تلقائياً عبر متغيرات البيئة
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# تشغيل خادم الويب في خلفية منفصلة لكي لا يعطل البوت
-threading.Thread(target=run_web_server).start()
