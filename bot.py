@@ -102,4 +102,4 @@ if __name__ == '__main__':
     
     # 3. تشغيل البوت ليكون هو الواجهة القائدة للسيرفر
     logging.info("🚀 السيرفر الفخم انطلق والبوت يستمع الآن بنجاح وبدون وسيط...")
-    application.run_polling(drop_pending_updates=True)
+    application.run_polling(drop_pending_updates=True, close_loop=False, timeout=20)
