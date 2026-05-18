@@ -2,12 +2,11 @@ import logging
 import os
 import threading
 import requests
-from datetime import datetime
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# --- 1. إعداد خادم الويب (Flask) لـ Render في البداية ---
+# 1. خادم الويب لـ Render
 app = Flask('')
 
 @app.route('/')
@@ -15,22 +14,16 @@ def home():
     return "Bot is running perfectly!"
 
 def run_web_server():
-    # Render يحدد المنفذ تلقائياً عبر متغيرات البيئة
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-
-# --- 2. إعداد السجلات ومراقبة عمل البوت ---
+# 2. إعدادات السجلات والتوكن
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-# التوكن الخاص ببوتك
 TOKEN = "8804058766:AAE2rc5Fh5H8oGuJM6KV1P1-NwREE5bvRk4"
 
-
-# --- 3. دالة جلب مواقيت الصلاة الحقيقية لبغداد ---
+# 3. جلب مواقيت الصلاة لبغداد
 def get_baghdad_prayer_times():
     try:
-        # استدعاء مواقيت بغداد من قاعدة بيانات المواقيت العالمية
         url = "http://api.aladhan.com/v1/timingsByCity?city=Baghdad&country=Iraq&method=4"
         response = requests.get(url).json()
         timings = response['data']['timings']
@@ -42,18 +35,16 @@ def get_baghdad_prayer_times():
             "العشاء": timings['Isha']
         }
     except Exception as e:
-        logging.error(f"خطأ في جلب المواقيت: {e}")
+        logging.error(f"Error fetching times: {e}")
         return None
 
-
-# --- 4. واجهة الأزرار الرئيسية ---
+# 4. أمر البداية
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     welcome_text = (
         f"🕌 مرحباً بك يا {user_name} في بوت المواقيت والأذكار الفخم.\n\n"
         "✨ تم تفعيل النظام التلقائي للتنبيهات والعبادات بنجاح لمدينة بغداد وضواحيها."
     )
-    
     keyboard = [
         [InlineKeyboardButton("⏱️ مواقيت الصلاة اليوم في بغداد", callback_data='prayer_times')],
         [InlineKeyboardButton("📿 أذكار الصباح والمساء التفاعلية", callback_data='azkar_menu')],
@@ -61,8 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
-
-# --- 5. دالة التعامل مع ضغطات الأزرار ---
+# 5. الأزرار
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -83,7 +73,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:
             message = "⚠️ عذراً، حدث خطأ في جلب المواقيت حالياً، حاول مجدداً."
-            
         await query.edit_message_text(text=message, parse_mode="Markdown")
         
     elif query.data == 'azkar_menu':
@@ -98,21 +87,15 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'dhikr_count':
         await query.answer(text="✨ تقبل الله طاعتك وغفر ذنبك ورزقك من حيث لا تحتسب ✅", show_alert=True)
 
-
-# --- 6. الدالة الأساسية لتشغيل البوت ---
+# 6. الدالة الأساسية
 def main():
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click))
-    
-    print("⚡ البوت الفخم يعمل الآن بنجاح ومستعد استقبال الأوامر...")
+    print("⚡ Bot is running successfully...")
     application.run_polling(timeout=60, read_timeout=60, write_timeout=60)
 
-
-# --- 7. نقطة انطلاق البرنامج بالترتيب الصحيح لـ Render ---
+# 7. نقطة الانطلاق لـ Render
 if __name__ == '__main__':
-    # أولوية أولى: تشغيل خادم الويب في خلفية منفصلة فوراً ليستجيب لـ Render
     threading.Thread(target=run_web_server, daemon=True).start()
-    
-    # أولوية ثانية: تشغيل البوت ليبقى مستمراً في العمل واستقبال الرسائل
     main()
