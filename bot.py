@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # التوكن الخاص ببوتك تلقائياً
-TOKEN = "8804058766:AAEajoTGyrtJB9pjIouOhKPBaBy0KTe1mGQ"
+TOKEN = "8804058766:AAE2rc5Fh5H8oGuJM6KV1P1-NwREE5bvRk4"
 
 # --- 2. إعداد خادم الويب (Flask) ---
 app = Flask('')
@@ -88,7 +88,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- 6. دالة تشغيل البوت القياسية والمستقرة ---
 def run_bot():
-    # إنشاء حلقة أحداث جديدة ونظيفة متوافقة مع بايثون 3.10
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
@@ -97,12 +96,12 @@ def run_bot():
     application.add_handler(CallbackQueryHandler(button_click))
     
     logging.info("⚡ البوت الفخم يستعد للاستماع للرسائل...")
-    # تشغيل البولينج القياسي المستقر
     application.run_polling(close_loop=False, drop_pending_updates=True)
 
-# --- 7. تشغيل البوت تلقائياً في الخلفية تماماً عند استدعاء gunicorn ---
-bot_thread = threading.Thread(target=run_bot, daemon=True)
-bot_thread.start()
+# --- 7. إجبار البوت على الإقلاع فوراً عند تشغيل خادم الويب (gunicorn) ---
+if not any(t.name == "DhikrBotThread" for t in threading.enumerate()):
+    bot_thread = threading.Thread(target=run_bot, name="DhikrBotThread", daemon=True)
+    bot_thread.start()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))
