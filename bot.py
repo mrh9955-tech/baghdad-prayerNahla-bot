@@ -2,7 +2,7 @@ import logging
 import os
 import asyncio
 import threading
-import random  # مكتبة الاختيار العشوائي لتجديد الأدعية
+import random
 import pytz
 from datetime import datetime, timedelta
 from flask import Flask
@@ -17,8 +17,8 @@ TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 # تخزين المشتركين لإرسال التنبيهات التلقائية لهم
 subscribed_users = set()
 
-# رابط ملف صوت تكبيرات العيد
-EID_TAKBEERAT_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+# 🕋 الرابط الصحيح والمباشر لتكبيرات العيد المباركة
+EID_TAKBEERAT_URL = "https://server11.mp3quran.net/bkt/Eid.mp3"
 
 # تحديد المنطقة الزمنية لمدينة بغداد بدقة
 BAGHDAD_TZ = pytz.timezone('Asia/Baghdad')
@@ -30,7 +30,7 @@ app = Flask('')
 def home():
     return "🚀 Baghdad Holy Bot - Periodic Duas & Qibla Direction Restored!"
 
-# --- 3. جدول مواقيت بغداد الورقي كاملاً (مطابق للصورة تماماً لشهر أيار 2026) ---
+# --- 3. جدول مواقيت بغداد الورقي كاملاً ---
 BAGHDAD_SCHEDULE = {
     "05-17": {"الفجر": "03:25", "الظهر": "12:04", "العصر": "15:45", "المغرب": "19:00", "العشاء": "20:27"}, 
     "05-18": {"الفجر": "03:24", "الظهر": "12:04", "العصر": "15:45", "المغرب": "19:01", "العشاء": "20:29"}, 
@@ -40,7 +40,7 @@ BAGHDAD_SCHEDULE = {
     "05-22": {"الفجر": "03:20", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:03", "العشاء": "20:32"}, 
     "05-23": {"الفجر": "03:19", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:04", "العشاء": "20:33"}, 
     "05-24": {"الفجر": "03:19", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:05", "العشاء": "20:34"}, 
-    "05-25": {"الفجر": "03:18", "ILظهر": "12:04", "العصر": "15:46", "المغرب": "19:06", "العشاء": "20:35"}, 
+    "05-25": {"الفجر": "03:18", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:06", "العشاء": "20:35"}, 
     "05-26": {"الفجر": "03:17", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:06", "العشاء": "20:36"}, 
     "05-27": {"الفجر": "03:16", "الظهر": "12:05", "العصر": "15:46", "المغرب": "19:07", "العشاء": "20:37"}, 
     "05-28": {"الفجر": "03:16", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:07", "العشاء": "20:38"}, 
@@ -76,7 +76,7 @@ SHORT_DUAS = [
 TXT_MORNING = "☀️ *أذكار الصباح المباركة:*\n\n🔹 أصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ.\n🔹 رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذَا الْيَوْمِ وَخَيْرَ مَا بَعْدَهُ.\n🔹 اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ.\n\nآية الكرسي: {اللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...}"
 TXT_EVENING = "🌙 *أذكار المساء المباركة (وقت الاستجابة):*\n\n🔹 أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ.\n🔹 اللَّهُمَّ مَا أَصْبَحَ أو أَمْسَى بِي مِنْ نِعْمَةٍ أَوْ بِأَحَدٍ مِنْ خَلْقِكَ فَمِنْكَ وَحْدَهُ لَا شَرِيكَ لَكَ.\n🔹 حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ (7 مرات)."
 
-# --- 5. واجهة الأزرار الرئيسية (تم إرجاع زر القبلة) ---
+# --- 5. واجهة الأزرار الرئيسية ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     subscribed_users.add(user_id)
@@ -133,8 +133,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_audio(
             audio=EID_TAKBEERAT_URL,
             title="تكبيرات عيد الأضحى المبارك",
-            performer="صوت مأثور عالي الجودة",
-            caption="🕋 *الله أكبر، الله أكبر، لا إله إلا الله...* \n\nاستمع وشعّ روحانية العيد المبارك بقلبك وعائلتك. ✨"
+            performer="صوت الحرم المكي الشريف",
+            caption="🕋 *الله أكبر، الله أكبر، لا إله إلا الله... الله أكبر، الله أكبر، ولله الحمد.*\n\nاستمع الآن لنفحات العيد المباركة الإيمانية. ✨"
         )
 
     elif query.data == 'quran_menu':
@@ -195,7 +195,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.edit_message_text(text="🕌 قائمة العبادات والمواقيت المتكاملة لمدينة بغداد:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-# --- 7. نظام الأتمتة المطور والمصحح بالكامل بتوقيت بغداد الصارم ---
+# --- 7. نظام الأتمتة المطور والمصحح بالكامل ---
 async def check_prayer_times(application: Application):
     last_exact = ""
     last_pre = ""
@@ -206,8 +206,6 @@ async def check_prayer_times(application: Application):
     last_arafa_dua = ""
     last_pre_eid = ""
     last_eid_day = ""
-    
-    # لتتبع أوقات إرسال الدعاء الدوري لمنع التكرار في نفس الساعة
     last_periodic_dua_hour = ""
 
     while True:
@@ -221,24 +219,20 @@ async def check_prayer_times(application: Application):
             times = get_current_prayer_times()
             
             if times:
-                # 🌟 ميزة الأدعية الدورية المتجددة (كل 3 ساعات من 9 صباحاً إلى قبل العشاء)
                 if now_str in ["09:00", "12:00", "15:00", "18:00"] and hour_str != last_periodic_dua_hour:
                     last_periodic_dua_hour = hour_str
-                    # اختيار دعاء عشوائي متجدد من القائمة
                     selected_dua = random.choice(SHORT_DUAS)
                     periodic_msg = f"✨ *جرعة إيمانية متجددة* ✨\n\n{selected_dua}\n\n🌿 لا تنسَ ذكر الله في هذه الساعات المباركة."
                     for user_id in list(subscribed_users):
                         try: await application.bot.send_message(chat_id=user_id, text=periodic_msg, parse_mode="Markdown")
                         except Exception: pass
 
-                # أ. أذكار الصباح التلقائية (الساعة 07:00 صباحاً بتوقيت بغداد)
                 if now_str == "07:00" and date_str != last_morning_azkar:
                     last_morning_azkar = date_str
                     for user_id in list(subscribed_users):
                         try: await application.bot.send_message(chat_id=user_id, text=TXT_MORNING, parse_mode="Markdown")
                         except Exception: pass
 
-                # ب. أذكار المساء تلقائياً قبل أذان المغرب بـ 30 دقيقة بتوقيت بغداد
                 maghrib_time = datetime.strptime(times['المغرب'], "%H:%M")
                 evening_azkar_time = (maghrib_time - timedelta(minutes=30)).strftime("%H:%M")
                 if now_str == evening_azkar_time and date_str != last_evening_azkar:
@@ -247,7 +241,6 @@ async def check_prayer_times(application: Application):
                         try: await application.bot.send_message(chat_id=user_id, text=TXT_EVENING, parse_mode="Markdown")
                         except Exception: pass
 
-                # 1. تذكير مسبق قبل يوم عرفة (يوم الاثنين 25 أيار) الساعة 08:00 مساءً بتوقيت بغداد
                 if date_str == "05-25" and now_str == "20:00" and date_str != last_pre_arafa:
                     last_pre_arafa = date_str
                     pre_arafa_text = "🚨 *تذكير مبارك - غداً يوم عرفة*\n\nغداً الثلاثاء هو يوم عرفة المشهود (9 ذي الحجة)، فاستعدوا لصيامه وتهيؤوا بالدعاء الصادق."
@@ -255,7 +248,6 @@ async def check_prayer_times(application: Application):
                         try: await application.bot.send_message(chat_id=user_id, text=pre_arafa_text, parse_mode="Markdown")
                         except Exception: pass
 
-                # 2. أجر صيام يوم عرفة (فجر يوم عرفة الثلاثاء 26 أيار) الساعة 04:00 صباحاً بتوقيت بغداد
                 if date_str == "05-26" and now_str == "04:00" and date_str != last_arafa_fasting:
                     last_arafa_fasting = date_str
                     fasting_text = "🕋 *أجر صيام يوم عرفة*\n\nقال رسول الله ﷺ عن صيام يوم عرفة: «أَحْتَسِبُ عَلَى اللهِ أَنْ يُكَفِّرَ السَّنَةَ الَّتِي قَبْلَهُ، وَالسَّنَةَ الَّتِي بَعْدَهُ».\n\n✨ تقبل الله طاعتكم وثبّت أجركم."
@@ -263,15 +255,13 @@ async def check_prayer_times(application: Application):
                         try: await application.bot.send_message(chat_id=user_id, text=fasting_text, parse_mode="Markdown")
                         except Exception: pass
 
-                # 3. دعاء يوم عرفة (ظهر يوم عرفة الثلاثاء 26 أيار) الساعة 12:30 ظهراً وقت الموقف المبارك
                 if date_str == "05-26" and now_str == "12:30" and date_str != last_arafa_dua:
                     last_arafa_dua = date_str
-                    arafa_dua_text = "🤲 *خير الدعاء دعاء يوم عرفة*\n\nقال النبي ﷺ: «خَيْرُ الدُّعَاءِ دُعَاءُ يَوْمِ عَرَفَةَ، وَخَيْرُ مَا قُلْتُ أَنَا وَالنَّبِيُّونَ مِنْ قَبْلِي: لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ»."
+                    arafa_dua_text = "🤲 *خير الدعاء دعاء يوم عرفة*\n\nقال النبي ﷺ: «خَيْرُ الدُّعَاءِ دُعَاءُ يَوْمِ عَرَفَةَ...»."
                     for user_id in list(subscribed_users):
                         try: await application.bot.send_message(chat_id=user_id, text=arafa_dua_text, parse_mode="Markdown")
                         except Exception: pass
 
-                # 4. تهنئة وقفة العيد والمساء (يوم عرفة الثلاثاء 26 أيار) الساعة 04:00 عصراً بتوقيت بغداد
                 if date_str == "05-26" and now_str == "16:00" and date_str != last_pre_eid:
                     last_pre_eid = date_str
                     pre_eid_text = "🕋 *يا لبيك اللهم لبيك، لبيك لا شريك لك لبيك...*\n\n✨ يسر البوت أن يهنئكم بيوم عرفة المبارك وقرب حلول عيد الأضحى المبارك! 🌿"
@@ -279,7 +269,6 @@ async def check_prayer_times(application: Application):
                         try: await application.bot.send_message(chat_id=user_id, text=pre_eid_text, parse_mode="Markdown")
                         except Exception: pass
 
-                # 5. تهنئة يوم عيد الأضحى المبارك (يوم الأربعاء 27 أيار) الساعة 05:15 صباحاً (بعد صلاة العيد بـ 20 دقيقة من الشروق تماماً)
                 if date_str == "05-27" and now_str == "05:15" and date_str != last_eid_day:
                     last_eid_day = date_str
                     eid_text = "🎉 *الله أكبر، الله أكبر، ولله الحمد...*\n\n🎈 تقبل الله صلاتكم وطاعتكم بعد خروجكم من صلاة العيد المباركة! أضحى مبارك وكل عام وأنتم وأهلكم بألف خير وعافية."
@@ -287,7 +276,6 @@ async def check_prayer_times(application: Application):
                         try: await application.bot.send_message(chat_id=user_id, text=eid_text, parse_mode="Markdown")
                         except Exception: pass
 
-                # و. التدقيق التلقائي الفوري للتنبيه المسبق وللأذان بالضبط (بتوقيت بغداد)
                 for prayer_name, prayer_time in times.items():
                     if pre_time_str == prayer_time and pre_time_str != last_pre:
                         last_pre = pre_time_str
@@ -310,7 +298,7 @@ async def check_prayer_times(application: Application):
 def start_prayer_checker(application):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(check_prayer_times(application))
+    loop.run_complete(check_prayer_times(application))
 
 # --- 8. التشغيل والربط ---
 if __name__ == '__main__':
@@ -327,5 +315,5 @@ if __name__ == '__main__':
     checker_thread = threading.Thread(target=start_prayer_checker, args=(application,), daemon=True)
     checker_thread.start()
     
-    logging.info("🚀 البوت جاهز بالكامل بعد إعادة زر القبلة ومزامنة الأدعية الدورية المتجددة...")
-    application.run_polling(drop_pending_updates=True, close_loop=False)       
+    logging.info("🚀 تم تحديث صوت التكبيرات بنجاح...")
+    application.run_polling(drop_pending_updates=True, close_loop=False)
