@@ -7,12 +7,15 @@ import pytz
 from datetime import datetime, timedelta
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 # --- 1. إعداد السجلات ومراقبة البوت ---
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
+
+# 👑 معرف حسابك الخاص كأدمن لإذاعة الصور والأدعية
+ADMIN_ID = 1007425134
 
 # تخزين المشتركين لإرسال التنبيهات التلقائية لهم
 subscribed_users = set()
@@ -28,7 +31,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "🚀 Baghdad Holy Bot - Clean & Fixed!"
+    return "🚀 Baghdad Holy Bot - Admin Broadcast Clean & Active!"
 
 # --- 3. جدول مواقيت بغداد الورقي كاملاً ---
 BAGHDAD_SCHEDULE = {
@@ -59,21 +62,11 @@ SHORT_DUAS = [
     "🤲 اللهم آتنا في الدنيا حسنة وفي الآخرة حسنة وقنا عذاب النار.",
     "🤲 يا حي يا قيوم برحمتك أستغيث أصلح لي شأني كله ولا تكلني إلى نفسي طرفة عين.",
     "🤲 اللهم مصرف القلوب صرف قلوبنا على طاعتك.",
-    "🤲 يا مقلب القلوب ثبت قلبي على دينك.",
-    "🤲 اللهم إني أسألك الهدى والتقى والعفاف والغنى.",
-    "🤲 ربِّ اجعلني مقيم الصلاة ومن ذريتي ربنا وتقبل دعاء.",
-    "🤲 اللهم إني أعوذ بك من الهم والحزن، والعجز والكسل.",
-    "🤲 ربِّ اشرح لي صدري ويسر لي أمري.",
-    "🤲 اللهم اجعل في قلبي نوراً وفي بصري نوراً وفي سمعي نوراً.",
-    "🤲 اللهم إني أسألك علماً نافعاً ورزقاً طيباً وعملاً متقبلاً.",
-    "🤲 رَبَّنَا تَقَبَّلْ مِنَّا إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ.",
-    "🤲 اللهم لا تجعل مصيبتنا في ديننا ولا تجعل الدنيا أكبر همنا.",
-    "🤲 ربِّ أعني ولا تعن علي، وانصرني ولا تنصر علي.",
-    "🤲 اللهم إني أسألك العافية في الدنيا والآخرة."
+    "🤲 يا مقلب القلوب ثبت قلبي على دينك."
 ]
 
-TXT_MORNING = "☀️ *أذكار الصباح المباركة:*\n\n🔹 أصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ.\n🔹 رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذَا الْيَوْمِ وَخَيْرَ مَا بَعْدَهُ.\n🔹 اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ.\n\nآية الكرسي: {اللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...}"
-TXT_EVENING = "🌙 *أذكار المساء المباركة (وقت الاستجابة):*\n\n🔹 أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ.\n🔹 اللَّهُمَّ مَا أَصْبَحَ أو أَمْسَى بِي مِنْ نِعْمَةٍ أَوْ بِأَحَدٍ مِنْ خَلْقِكَ فَمِنْكَ وَحْدَهُ لَا شَرِيكَ لَكَ.\n🔹 حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ (7 مرات)."
+TXT_MORNING = "☀️ *أذكار الصباح المباركة:*\n\n🔹 أصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ.\n🔹 اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ."
+TXT_EVENING = "🌙 *أذكار المساء المباركة (وقت الاستجابة):*\n\n🔹 أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ.\n🔹 حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ (7 مرات)."
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -84,6 +77,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✨ تم ضبط التوقيتات والأدعية الدورية وإعادة بوصلة اتجاه القبلة لخدمتكم بدقة."
     )
     
+    if user_id == ADMIN_ID:
+        welcome_text += "\n\n👑 *مرحباً بك يا أدمن!* يمكنك الآن إرسال أي (نص، دعاء، أو صورة) مباشرة هنا في المحادثة، وسيقوم البوت بنشرها فوراً لكل المشتركين."
+
     keyboard = [
         [InlineKeyboardButton("⏱️ مواقيت الصلاة اليوم", callback_data='prayer_times')],
         [InlineKeyboardButton("🕋 اتجاه القبلة لمدينة بغداد", callback_data='qibla_direction')],
@@ -92,7 +88,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎧 تكبيرات العيد (استماع مباشر)", callback_data='play_takbeerat')],
         [InlineKeyboardButton("✨ حكمة اليوم الإيمانية", callback_data='wisdom_day')]
     ]
-    await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text(welcome_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+# 📢 ميزة النشر والإذاعة التلقائية للأدمن من الموبايل
+async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    if user_id != ADMIN_ID:
+        return
+
+    status_msg = await update.message.reply_text("⏳ jاري نشر وتوزيع رسالتك المباركة على جميع المشتركين...")
+    count = 0
+
+    if update.message.photo:
+        photo_file_id = update.message.photo[-1].file_id
+        caption_text = update.message.caption if update.message.caption else ""
+        for sub_id in list(subscribed_users):
+            if sub_id != ADMIN_ID:
+                try:
+                    await context.bot.send_photo(chat_id=sub_id, photo=photo_file_id, caption=caption_text)
+                    count += 1
+                except Exception: pass
+
+    elif update.message.text:
+        text_to_send = update.message.text
+        for sub_id in list(subscribed_users):
+            if sub_id != ADMIN_ID:
+                try:
+                    await context.bot.send_message(chat_id=sub_id, text=text_to_send)
+                    count += 1
+                except Exception: pass
+
+    await status_msg.edit_text(f"✅ تم بنجاح إرسال ونشر رسالتك إلى ({count}) مشترك نشط بالبوت!")
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -157,4 +184,128 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'q_mulk':
         text = "📖 *سورة الملك (مكتوبة داخل التطبيق):*\n\n【تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ...】"
         keyboard = [[InlineKeyboardButton("🔙 عودة للمصحف", callback_data='quran_menu')]]
-        await
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'q_kahf':
+        text = "📖 *سورة الكهف (نص مريح لكبار السن):*\n\n【الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَى عَبْدِهِ الْكِتَابَ...】"
+        keyboard = [[InlineKeyboardButton("🔙 عودة للمصحف", callback_data='quran_menu')]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'azkar_menu':
+        message = "📿 *حصن المسلم والأذكار اليومية المكتوبة:* "
+        keyboard = [
+            [InlineKeyboardButton("☀️ أذكار الصباح", callback_data='view_morning')],
+            [InlineKeyboardButton("🌙 أذكار المساء", callback_data='view_evening')],
+            [InlineKeyboardButton("🔙 العودة", callback_data='main_menu')]
+        ]
+        await query.edit_message_text(text=message, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'view_morning':
+        keyboard = [[InlineKeyboardButton("🔙 عودة للأذكار", callback_data='azkar_menu')]]
+        await query.edit_message_text(text=TXT_MORNING, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'view_evening':
+        keyboard = [[InlineKeyboardButton("🔙 عودة للأذكار", callback_data='azkar_menu')]]
+        await query.edit_message_text(text=TXT_EVENING, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'wisdom_day':
+        text = "✨ *حكمة اليوم الإيمانية:*\n\n\"إن الله يعطي الدنيا لمن يحب ومن لا يحب، ولا يعطي الدين إلا لمن أحب...\""
+        keyboard = [[InlineKeyboardButton("🔙 العودة الرئيسية", callback_data='main_menu')]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'main_menu':
+        keyboard = [
+            [InlineKeyboardButton("⏱️ مواقيت الصلاة اليوم", callback_data='prayer_times')],
+            [InlineKeyboardButton("🕋 اتجاه القبلة لمدينة بغداد", callback_data='qibla_direction')],
+            [InlineKeyboardButton("📖 المصحف الإلكتروني (داخل التطبيق)", callback_data='quran_menu')],
+            [InlineKeyboardButton("📿 حصن المسلم والأذكار", callback_data='azkar_menu')],
+            [InlineKeyboardButton("🎧 تكبيرات العيد (استماع مباشر)", callback_data='play_takbeerat')],
+            [InlineKeyboardButton("✨ حكمة اليوم الإيمانية", callback_data='wisdom_day')]
+        ]
+        await query.edit_message_text(text="🕌 قائمة العبادات والمواقيت المتكاملة لمدينة بغداد:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+# --- 7. نظام الأتمتة المطور والمصحح بالكامل ---
+async def check_prayer_times(application: Application):
+    last_exact = ""
+    last_pre = ""
+    last_morning_azkar = ""
+    last_evening_azkar = ""
+    last_periodic_dua_hour = ""
+
+    while True:
+        try:
+            now_dt = datetime.now(BAGHDAD_TZ)
+            now_str = now_dt.strftime("%H:%M")
+            hour_str = now_dt.strftime("%H")
+            date_str = now_dt.strftime("%m-%d")
+            
+            pre_time_str = (now_dt + timedelta(minutes=10)).strftime("%H:%M")
+            times = get_current_prayer_times()
+            
+            if times:
+                if now_str in ["09:00", "12:00", "15:00", "18:00"] and hour_str != last_periodic_dua_hour:
+                    last_periodic_dua_hour = hour_str
+                    selected_dua = random.choice(SHORT_DUAS)
+                    periodic_msg = f"✨ *جرعة إيمانية متجددة* ✨\n\n{selected_dua}\n\n🌿 لا تنسَ ذكر الله في هذه الساعات المباركة."
+                    for user_id in list(subscribed_users):
+                        try: await application.bot.send_message(chat_id=user_id, text=periodic_msg, parse_mode="Markdown")
+                        except Exception: pass
+
+                if now_str == "07:00" and date_str != last_morning_azkar:
+                    last_morning_azkar = date_str
+                    for user_id in list(subscribed_users):
+                        try: await application.bot.send_message(chat_id=user_id, text=TXT_MORNING, parse_mode="Markdown")
+                        except Exception: pass
+
+                maghrib_time = datetime.strptime(times['المغرب'], "%H:%M")
+                evening_azkar_time = (maghrib_time - timedelta(minutes=30)).strftime("%H:%M")
+                if now_str == evening_azkar_time and date_str != last_evening_azkar:
+                    last_evening_azkar = date_str
+                    for user_id in list(subscribed_users):
+                        try: await application.bot.send_message(chat_id=user_id, text=TXT_EVENING, parse_mode="Markdown")
+                        except Exception: pass
+
+                for prayer_name, prayer_time in times.items():
+                    if pre_time_str == prayer_time and pre_time_str != last_pre:
+                        last_pre = pre_time_str
+                        pre_msg = f"🚨 *تذكير مسبق*\n\nمتبقي **10 دقائق** على رفع أذان [{prayer_name}] بتوقيت بغداد.\n\n🍃 تهيأ للوضوء والاستعداد للصلاة يرحمك الله."
+                        for user_id in list(subscribed_users):
+                            try: await application.bot.send_message(chat_id=user_id, text=pre_msg, parse_mode="Markdown")
+                            except Exception: pass
+
+                    if now_str == prayer_time and now_str != last_exact:
+                        last_exact = now_str
+                        exact_msg = f"🕌 *تنبيه أذان الفريضة*\n\nحان الآن موعد أذان [{prayer_name}] بحسب التوقيت المحلي لمدينة بغداد.\n\n✨ قم إلى صلاتك يرحمك الله."
+                        for user_id in list(subscribed_users):
+                            try: await application.bot.send_message(chat_id=user_id, text=exact_msg, parse_mode="Markdown")
+                            except Exception: pass
+
+        except Exception as e:
+            logging.error(f"Error in automated loop: {e}")
+        await asyncio.sleep(20)
+
+def start_prayer_checker(application):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(check_prayer_times(application))
+
+# --- 8. التشغيل والربط ---
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 8080))
+    
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_click))
+    
+    # ربط مستمع الرسائل والصور الخاص بالإذاعة للأدمن
+    application.add_handler(MessageHandler(filters.PHOTO | filters.TEXT, admin_broadcast))
+    
+    web_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, use_reloader=False))
+    web_thread.daemon = True
+    web_thread.start()
+    
+    checker_thread = threading.Thread(target=start_prayer_checker, args=(application,), daemon=True)
+    checker_thread.start()
+    
+    logging.info("🚀 تم تشغيل ميزة الإذاعة للأدمن بنجاح وبكود نظيف...")
+    application.run_polling(drop_pending_updates=True, close_loop=False)
