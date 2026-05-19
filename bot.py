@@ -28,7 +28,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "🚀 Baghdad Holy Bot - Main Loop & Audio Fixed!"
+    return "🚀 Baghdad Holy Bot - Clean & Fixed!"
 
 # --- 3. جدول مواقيت بغداد الورقي كاملاً ---
 BAGHDAD_SCHEDULE = {
@@ -73,7 +73,7 @@ SHORT_DUAS = [
 ]
 
 TXT_MORNING = "☀️ *أذكار الصباح المباركة:*\n\n🔹 أصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ.\n🔹 رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذَا الْيَوْمِ وَخَيْرَ مَا بَعْدَهُ.\n🔹 اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ.\n\nآية الكرسي: {اللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...}"
-TXT_EVENING = "🌙 *أذكار المساء المباركة (وقت الاستجابة):*\n\n🔹 أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ.\n🔹 اللَّهُمَّ مَا أَصْبَحَ أو أَمْسَى بِي مِنْ نِعْمَةٍ أَوْ بِأَحَدٍ مِنْ خَلْقِكَ فَمِنْكَ وَحْدَهُ لَا شريكَ لَكَ.\n🔹 حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ (7 مرات)."
+TXT_EVENING = "🌙 *أذكار المساء المباركة (وقت الاستجابة):*\n\n🔹 أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ.\n🔹 اللَّهُمَّ مَا أَصْبَحَ أو أَمْسَى بِي مِنْ نِعْمَةٍ أَوْ بِأَحَدٍ مِنْ خَلْقِكَ فَمِنْكَ وَحْدَهُ لَا شَرِيكَ لَكَ.\n🔹 حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ (7 مرات)."
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -94,4 +94,67 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def button_click(update: Update, context
+async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'prayer_times':
+        times = get_current_prayer_times()
+        message = (
+            "🕌 *مواقيت الصلاة اليوم لمدينة بغداد*\n"
+            "📌 (مطابقة لجدول الأوقات الورقي بالكامل 100%)\n"
+            "ــــــــــــــــــــــــــــــــــــــــــــــــــــــــ\n"
+            f"🕋 الفجر: {times['الفجر']} | ☀️ الظهر: {times['الظهر']}\n"
+            f"🎯 العصر: {times['العصر']} | 🌙 المغرب: {times['المغرب']}\n"
+            f"🌌 العشاء: {times['العشاء']}\n"
+            "ــــــــــــــــــــــــــــــــــــــــــــــــــــــــ\n"
+            "🔔 يرسل البوت التنبيهات التلقائية والأذكار بوقتها الشرعي مباركاً."
+        )
+        keyboard = [[InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='main_menu')]]
+        await query.edit_message_text(text=message, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'qibla_direction':
+        message = (
+            "🕋 *اتجاه القبلة الصحيح لمدينة بغداد:*\n\n"
+            "📍 زاوية اتجاه القبلة في بغداد هي تقريباً **193.35 درجة** باتجاه الجنوب الغربي.\n\n"
+            "📱 *طريقة الاستخدام عبر الهاتف:*\n"
+            "1. افتح تطبيق البوصلة على جهازك.\n"
+            "2. ضع الهاتف بشكل مسطح تماماً على يدك.\n"
+            "3. وجّه أعلى الهاتف نحو الدرجة **193°** لتكون مواجهاً للكعبة المشرفة مباشرة.\n\n"
+            "تقبل الله صلاتكم وطاعاتكم صالح الأعمال ✨"
+        )
+        keyboard = [[InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='main_menu')]]
+        await query.edit_message_text(text=message, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'play_takbeerat':
+        await query.message.reply_text("⏳ جاري تحميل وإرسال تكبيرات العيد الفخمة، لحظات من فضلك...")
+        try:
+            await query.message.reply_audio(
+                audio=EID_TAKBEERAT_URL,
+                title="تكبيرات عيد الأضحى المبارك",
+                performer="الحرم المكي الشريف",
+                caption="🕋 *الله أكبر، الله أكبر، لا إله إلا الله... الله أكبر، الله أكبر، ولله الحمد.*\n\nتقبل الله طاعاتكم صالح الأعمال. ✨"
+            )
+        except Exception as e:
+            logging.error(f"Audio send error: {e}")
+            await query.message.reply_text("❌ حدث خطأ في تشغيل الصوت، يرجى المحاولة مرة أخرى.")
+
+    elif query.data == 'quran_menu':
+        message = "📖 *المصحف الإلكتروني المتكامل داخل التليكرام:*\n(سهل جداً ومناسب لكبار السن دون روابط خارجية)"
+        keyboard = [
+            [InlineKeyboardButton("👑 آية الكرسي", callback_data='q_kursi')],
+            [InlineKeyboardButton("📑 سورة الكهف كاملة", callback_data='q_kahf')],
+            [InlineKeyboardButton("🌌 سورة الملك كاملة", callback_data='q_mulk')],
+            [InlineKeyboardButton("🔙 العودة", callback_data='main_menu')]
+        ]
+        await query.edit_message_text(text=message, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'q_kursi':
+        text = "📖 *آية الكرسي - قراءة مباركة:*\n\n【اللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...】"
+        keyboard = [[InlineKeyboardButton("🔙 عودة للمصحف", callback_data='quran_menu')]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'q_mulk':
+        text = "📖 *سورة الملك (مكتوبة داخل التطبيق):*\n\n【تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ...】"
+        keyboard = [[InlineKeyboardButton("🔙 عودة للمصحف", callback_data='quran_menu')]]
+        await
