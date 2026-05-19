@@ -14,7 +14,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 
 # 👑 معرف حسابك الخاص كأدمن
-ADMIN_ID = 1007425134
+ADMIN_ID = 56567867
 
 # تخزين المشتركين لإرسال التنبيهات التلقائية لهم
 subscribed_users = set()
