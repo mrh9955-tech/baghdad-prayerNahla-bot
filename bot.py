@@ -190,3 +190,88 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == 'q_qisar':
         keyboard = [[InlineKeyboardButton("🔙 عودة للمصحف", callback_data='quran_menu')]]
+        await query.edit_message_text(text=TXT_QISAR, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'azkar_menu':
+        message = "📿 *قسم الأذكار اليومية المكتوبة كاملة:* "
+        keyboard = [
+            [InlineKeyboardButton("☀️ أذكار الصباح كاملة", callback_data='view_morning')],
+            [InlineKeyboardButton("🌙 أذكار المساء كاملة", callback_data='view_evening')],
+            [InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='main_menu')]
+        ]
+        await query.edit_message_text(text=message, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'view_morning':
+        keyboard = [[InlineKeyboardButton("🔙 عودة للأذكار", callback_data='azkar_menu')]]
+        await query.edit_message_text(text=TXT_MORNING, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'view_evening':
+        keyboard = [[InlineKeyboardButton("🔙 عودة للأذكار", callback_data='azkar_menu')]]
+        await query.edit_message_text(text=TXT_EVENING, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'duas_menu':
+        message = "🤲 *بوابة الأدعية المستجابة والرقية الشرعية:* "
+        keyboard = [
+            [InlineKeyboardButton("🔹 أدعية الهم والفرج وتيسير الكرب", callback_data='view_hamm')],
+            [InlineKeyboardButton("🩺 أدعية الشفاء من المرض والرقية", callback_data='view_shifa')],
+            [InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='main_menu')]
+        ]
+        await query.edit_message_text(text=message, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'view_hamm':
+        keyboard = [[InlineKeyboardButton("🔙 عودة للأدعية", callback_data='duas_menu')]]
+        await query.edit_message_text(text=TXT_HAMM, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'view_shifa':
+        keyboard = [[InlineKeyboardButton("🔙 عودة للأدعية", callback_data='duas_menu')]]
+        await query.edit_message_text(text=TXT_SHIFA, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'wisdom_day':
+        # استدعاء الحكمة اليومية المتغيرة تلقائياً
+        wisdom_text = get_dynamic_wisdom()
+        keyboard = [[InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='main_menu')]]
+        await query.edit_message_text(text=wisdom_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'main_menu':
+        keyboard = [
+            [InlineKeyboardButton("⏱️ مواقيت الصلاة اليوم", callback_data='prayer_times')],
+            [InlineKeyboardButton("📖 المصحف الإلكتروني", callback_data='quran_menu')],
+            [InlineKeyboardButton("📿 حصن المسلم والأذكار", callback_data='azkar_menu')],
+            [InlineKeyboardButton("🤲 أدعية الهم والفرج والشفاء", callback_data='duas_menu')],
+            [InlineKeyboardButton("✨ حكمة اليوم المتجددة", callback_data='wisdom_day')]
+        ]
+        await query.edit_message_text(text="🕌 قائمة العبادات والمواقيت المتكاملة لمدينة بغداد:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+# --- 5. نظام الأتمتة الدوري للتنبيهات ---
+async def check_prayer_times(application: Application):
+    last_exact = ""
+    while True:
+        try:
+            now_str = datetime.now(BAGHDAD_TZ).strftime("%H:%M")
+            times = get_current_prayer_times()
+            if times:
+                for name, p_time in times.items():
+                    if now_str == p_time and now_str != last_exact:
+                        last_exact = now_str
+                        for uid in list(subscribed_users):
+                            try: await application.bot.send_message(chat_id=uid, text=f"🕌 حان الآن موعد أذان [{name}] في بغداد.")
+                            except Exception: pass
+        except Exception: pass
+        await asyncio.sleep(20)
+
+# --- 6. التشغيل والربط ---
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 8080))
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_click))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_broadcast))
+    
+    web_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, use_reloader=False), daemon=True)
+    web_thread.start()
+    
+    checker_thread = threading.Thread(target=lambda: asyncio.run(check_prayer_times(application)), daemon=True)
+    checker_thread.start()
+    
+    logging.info("🚀 تم تحديث نظام الحكم وإلغاء التكبيرات بنجاح...")
+    application.run_polling(drop_pending_updates=True)
