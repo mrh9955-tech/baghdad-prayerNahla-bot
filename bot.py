@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
-ADMIN_ID = 56567867 # ضع الأيدي الخاص بك هنا للتحكم
+ADMIN_ID = 1007425134 # ضع الأيدي الخاص بك هنا للتحكم
 BAGHDAD_TZ = pytz.timezone('Asia/Baghdad')
 
 # --- دوال المساعدة ---
