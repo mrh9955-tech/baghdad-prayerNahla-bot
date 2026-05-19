@@ -2,7 +2,6 @@ import logging
 import os
 import asyncio
 import threading
-import random
 import pytz
 from datetime import datetime, timedelta
 from flask import Flask
@@ -28,7 +27,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "🚀 Baghdad Holy Bot - Dynamic Wisdom System Active!"
+    return "🚀 Baghdad Holy Bot - Double Prayer Notification System Active!"
 
 # --- 3. قاعدة البيانات النصية الكاملة للمصحف والأذكار والأدعية ---
 
@@ -75,7 +74,7 @@ TXT_QISAR = (
 TXT_MORNING = (
     "☀️ *أذكار الصباح المباركة كاملة:*\n\n"
     "🔹 *أصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ* وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ.\n\n"
-    "🔹 *اللَّهُمَّ بِكَ أَصْبَحْنَا*، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ.\n\n"
+    "🔹 *اللَّهُمَّ بِكَ أَصْبَحْنَا*، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُور.\n\n"
     "🔹 *اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ*، خَلقتني وأنا عبدك، وأنا على عهدك ووعدك ما استطعت.\n\n"
     "🔹 *بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ* فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ. (3 مرات)"
 )
@@ -103,7 +102,6 @@ TXT_SHIFA = (
     "🔹 *أَسْأَلُ اللَّهَ الْعَظِيمَ* رَبَّ الْعَرْشِ الْعَظِيمِ أَنْ يَشْفِيَكَ. (7 مرات)"
 )
 
-# 📚 قاعدة بيانات الـحِـكَـم المتغيرة ذاتياً حسب أيام الشهر وضمان التنوع اليومي
 DAILY_WISDOMS = [
     "✨ *حكمة اليوم:* \"إن الله يعطي الدنيا لمن يحب ومن لا يحب، ولا يعطي الدين إلا لمن أحب.\"",
     "✨ *حكمة اليوم:* \"إن الله لا ينظر إلى صوركم وأموالكم، ولكن ينظر إلى قلوبكم وأعمالكم.\"",
@@ -115,7 +113,6 @@ DAILY_WISDOMS = [
 ]
 
 def get_dynamic_wisdom():
-    # اختيار الحكمة بالاعتماد على رقم اليوم الحالي للحصول على حكمة متجددة يومياً
     day_num = datetime.now(BAGHDAD_TZ).day
     index = day_num % len(DAILY_WISDOMS)
     return DAILY_WISDOMS[index]
@@ -134,7 +131,10 @@ def get_current_prayer_times():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     subscribed_users.add(user_id)
-    welcome_text = f"🕌 مرحباً بك يا {update.effective_user.first_name} في بوت العبادات والأذكار المتكامل لمدينة بغداد."
+    welcome_text = (
+        f"🕌 مرحباً بك يا {update.effective_user.first_name} في بوت العبادات والأذكار المتكامل لمدينة بغداد.\n\n"
+        "✨ *ملاحظة:* هذا البوت ثواب بنية شفاء والدتي العزيزة، فضلاً وليس أمراً نسألكم الدعاء لها بالشفاء العاجل والصحة التامة. 🤲"
+    )
     
     keyboard = [
         [InlineKeyboardButton("⏱️ مواقيت الصلاة اليوم", callback_data='prayer_times')],
@@ -143,7 +143,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🤲 أدعية الهم والفرج والشفاء", callback_data='duas_menu')],
         [InlineKeyboardButton("✨ حكمة اليوم المتجددة", callback_data='wisdom_day')]
     ]
-    await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text(welcome_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -227,7 +227,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text=TXT_SHIFA, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif query.data == 'wisdom_day':
-        # استدعاء الحكمة اليومية المتغيرة تلقائياً
         wisdom_text = get_dynamic_wisdom()
         keyboard = [[InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='main_menu')]]
         await query.edit_message_text(text=wisdom_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -242,19 +241,54 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.edit_message_text(text="🕌 قائمة العبادات والمواقيت المتكاملة لمدينة بغداد:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-# --- 5. نظام الأتمتة الدوري للتنبيهات ---
+# --- 5. نظام الأتمتة المطور: تنبيه قبل 10 دقائق + تنبيه في الموعد ---
 async def check_prayer_times(application: Application):
-    last_exact = ""
+    # استخدام قاموس لمتابعة الحالات ومنع تكرار الإرسال في نفس الدقيقة
+    sent_flags = {} 
+    
     while True:
         try:
-            now_str = datetime.now(BAGHDAD_TZ).strftime("%H:%M")
+            now_baghdad = datetime.now(BAGHDAD_TZ)
+            now_str = now_baghdad.strftime("%H:%M")
+            date_str = now_baghdad.strftime("%Y-%m-%d")
+            
             times = get_current_prayer_times()
             if times:
-                for name, p_time in times.items():
-                    if now_str == p_time and now_str != last_exact:
-                        last_exact = now_str
+                for name, p_time_str in times.items():
+                    # تحويل وقت الأذان إلى كائن datetime للمقارنة الرياضية دقيقة بدقة
+                    p_time = datetime.strptime(p_time_str, "%H:%M").time()
+                    p_datetime = datetime.combine(now_baghdad.date(), p_time)
+                    p_datetime = BAGHDAD_TZ.localize(p_datetime)
+                    
+                    # 1. حساب وقت التنبيه المسبق (قبل 10 دقائق)
+                    pre_alert_datetime = p_datetime - timedelta(minutes=10)
+                    pre_alert_str = pre_alert_datetime.strftime("%H:%M")
+                    
+                    # مفاتيح فريدة لمنع التكرار
+                    key_pre = f"{date_str}_{name}_pre"
+                    key_exact = f"{date_str}_{name}_exact"
+                    
+                    # إرسال التنبيه قبل 10 دقائق
+                    if now_str == pre_alert_str and sent_flags.get(key_pre) is not True:
+                        sent_flags[key_pre] = True
                         for uid in list(subscribed_users):
-                            try: await application.bot.send_message(chat_id=uid, text=f"🕌 حان الآن موعد أذان [{name}] في بغداد.")
+                            try:
+                                await application.bot.send_message(
+                                    chat_id=uid, 
+                                    text=f"⏰ *اقترب موعد الأذان:*\nباقي 10 دقائق على موعد أذان [{name}] في بغداد. تهيأوا للوضوء والصلاة يرحمكم الله. 🕌",
+                                    parse_mode="Markdown"
+                                )
+                            except Exception: pass
+                            
+                    # إرسال التنبيه في الموعد بالضبط
+                    if now_str == p_time_str and sent_flags.get(key_exact) is not True:
+                        sent_flags[key_exact] = True
+                        for uid in list(subscribed_users):
+                            try:
+                                await application.bot.send_message(
+                                    chat_id=uid, 
+                                    text=f"🕌 *حان الآن موعد أذان [{name}] في بغداد.*"
+                                )
                             except Exception: pass
         except Exception: pass
         await asyncio.sleep(20)
@@ -273,5 +307,5 @@ if __name__ == '__main__':
     checker_thread = threading.Thread(target=lambda: asyncio.run(check_prayer_times(application)), daemon=True)
     checker_thread.start()
     
-    logging.info("🚀 تم تحديث نظام الحكم وإلغاء التكبيرات بنجاح...")
+    logging.info("🚀 تم تفعيل التنبيه المزدوج (المسبق والفعلي) بنجاح...")
     application.run_polling(drop_pending_updates=True)
