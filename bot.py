@@ -106,4 +106,36 @@ def handle_query(call):
     if call.data == 'prayer':
         bot.edit_message_text(get_prayer_text(), call.message.chat.id, call.message.message_id, reply_markup=get_back_keyboard())
     elif call.data == 'azkar':
-        bot.edit_message_text(f"{TXT_AZKAR_SABAH}\n\n-----------\n\n{TXT_AZKAR_MASSA}", call.message.chat.id, call.message.message_id, reply_markup=get_
+        # تم إصلاح السطر وإغلاق القوس بشكل صحيح هنا لقائمة أذكار الصباح والمساء
+        bot.edit_message_text(f"{TXT_AZKAR_SABAH}\n\n-----------\n\n{TXT_AZKAR_MASSA}", call.message.chat.id, call.message.message_id, reply_markup=get_back_keyboard())
+    elif call.data == 'duas':
+        bot.edit_message_text(TXT_DUAS_PAGE, call.message.chat.id, call.message.message_id, reply_markup=get_back_keyboard())
+    elif call.data == 'qibla':
+        bot.edit_message_text(TXT_QIBLA, call.message.chat.id, call.message.message_id, reply_markup=get_back_keyboard())
+    elif call.data == 'main':
+        bot.edit_message_text(TXT_WELCOME, call.message.chat.id, call.message.message_id, reply_markup=get_main_keyboard())
+
+# --- خيط الخلفية المسؤول عن الإشعارات الدقيقة لمنع التكرار ---
+def scheduler_loop():
+    last_sent_minute = ""
+    while True:
+        try:
+            now = datetime.now(BAGHDAD_TZ)
+            date_key = now.strftime("%Y-%m-%d")
+            now_str = now.strftime("%H:%M")
+            
+            if now_str == last_sent_minute:
+                time.sleep(10)
+                continue
+
+            current_subs = load_subscribers()
+            sent_this_loop = False
+
+            if now_str == "07:00":
+                for uid in current_subs:
+                    try: bot.send_message(uid, TXT_AZKAR_SABAH)
+                    except: pass
+                sent_this_loop = True
+
+            if date_key in PRAYER_DATABASE:
+                day_data = PRAYER_DATABASE
