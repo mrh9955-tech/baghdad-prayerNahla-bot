@@ -1,9 +1,9 @@
 import logging
 import os
-import asyncio
 from datetime import datetime, timedelta
 import pytz
 from flask import Flask
+from threading import Thread
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -83,8 +83,8 @@ PRAYER_DATABASE = {
     "2026-05-26": {"hijri": "10 ذو الحجة", "الفجر": "03:17", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:06", "العشاء": "20:36"}, 
     "2026-05-27": {"hijri": "11 ذو الحجة", "الفجر": "03:16", "الظهر": "12:05", "العصر": "15:46", "المغرب": "19:07", "العشاء": "20:37"},
     "2026-05-28": {"hijri": "12 ذو الحجة", "الفجر": "03:16", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:07", "العشاء": "20:38"},
-    "2026-05-29": {"hijri": "13 ذو الحجة", "الفجر": "03:15", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:08", "العشاء": "20:39"},
-    "2026-05-30": {"hijri": "14 ذو الحجة", "الفجر": "03:14", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:09", "العشاء": "20:40"},
+    "2026-05-29": {"hijri": "13 ذو الحجة", "الفجر": "03:15", "الظهر": "12:05", "Alloc": "15:47", "المغرب": "19:08", "العشاء": "20:39"},
+    "2026-05-30": {"hijri": "14 ذو الحجة", "الفجر": "03:14", "الظهر": "12:05", "Alloc": "15:47", "المغرب": "19:09", "العشاء": "20:40"},
     "2026-05-31": {"hijri": "15 ذو الحجة", "الفجر": "03:14", "الظهر": "12:05", "Alloc": "15:47", "المغرب": "19:09", "العشاء": "20:40"}
 }
 
@@ -185,12 +185,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'main':
         await query.edit_message_text(TXT_WELCOME, parse_mode="Markdown", reply_markup=get_main_keyboard())
 
-# --- دالة ويب سريعة من أجل Render ---
+# --- سيرفر ويب لخداع Render ---
 app = Flask(__name__)
 @app.route('/')
-def home(): return "Prayer Bot Active"
+def home(): 
+    return "Prayer Bot Running Successfully"
 
-async def main():
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+if __name__ == '__main__':
+    # تشغيل سيرفر ويب كـ Thread مستقل
+    flask_thread = Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # تشغيل البوت بالطريقة الرسمية والمستقرة
     application = Application.builder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start))
@@ -200,20 +211,5 @@ async def main():
     if application.job_queue:
         application.job_queue.run_repeating(scheduled_alerts_job, interval=30, first=10)
     
-    from threading import Thread
-    Thread(target=lambda: app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000))), daemon=True).start()
-    
-    # التعديل الهام هنا: تهيئة وتشغيل الـ updater بشكل يبقيه مستمع للأوامر بصورة صحيحة
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling(drop_pending_updates=True)
-    
-    # المحافظة على تشغيل الـ Loop الرئيسي للبوت
-    stop_event = asyncio.Event()
-    await stop_event.wait()
-
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        pass
+    # تشغيل استقبال الرسائل بشكل مباشر يمنع التعليق
+    application.run_polling(drop_pending_updates=True)
