@@ -13,26 +13,28 @@ logging.basicConfig(level=logging.INFO)
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 BAGHDAD_TZ = pytz.timezone('Asia/Baghdad')
 
-# الرقم التعريفي الجديد لحسابك الشخصي (المسؤول) لتفعيل ميزة الإحصائيات السريعة لك وحده
+# الرقم التعريفي لحسابك المسؤول (ثابت ومحمي)
 ADMIN_ID = 5656787  
 
 SUBSCRIBERS_FILE = "subscribers.txt"
 
-# --- دالة حفظ وجلب المشتركين من ملف دائم ---
+# --- دالة جلب المشتركين الذكية لمنع التصفير ---
 def load_subscribers():
+    # حسابك مدمج هنا كأمان دائم ومستحيل ينمسح
+    subs = {5656787} 
+    
     if os.path.exists(SUBSCRIBERS_FILE):
         with open(SUBSCRIBERS_FILE, "r") as f:
-            return set(int(line.strip()) for line in f if line.strip().isdigit())
-    return set()
+            for line in f:
+                if line.strip().isdigit():
+                    subs.add(int(line.strip()))
+    return subs
 
 def save_subscriber(user_id):
     subs = load_subscribers()
     if user_id not in subs:
         with open(SUBSCRIBERS_FILE, "a") as f:
             f.write(f"{user_id}\n")
-
-# شحن المشتركين بالذاكرة عند التشغيل لضمان استقرار الإشعارات
-subscribed_users = load_subscribers()
 
 # --- النصوص والواجهات الثابتة ---
 TXT_WELCOME = "🕌 *بوت العبادات لمدينة بغداد وضواحيها*\nصدقة جارية بنية شفاء الوالدة. اختر قسماً من القائمة:"
@@ -101,7 +103,7 @@ PRAYER_DATABASE = {
     "2026-06-09": {"hijri": "24 ذو الحجة", "الفجر": "03:10", "الظهر": "12:07", "العصر": "15:49", "المغرب": "19:14", "العشاء": "20:47"},
     "2026-06-10": {"hijri": "25 ذو الحجة", "الفجر": "03:10", "الظهر": "12:07", "العصر": "15:49", "المغرب": "19:15", "العشاء": "20:47"},
     "2026-06-11": {"hijri": "26 ذو الحجة", "الفجر": "03:10", "الظهر": "12:07", "العصر": "15:49", "المغرب": "19:15", "العشاء": "20:48"},
-    "2026-06-12": {"hijri": "27 ذو الحجة", "الفجر": "03:10", "الظهر": "12:07", "Cyber": "15:49", "المغرب": "19:15", "العشاء": "20:48"},
+    "2026-06-12": {"hijri": "27 ذو الحجة", "الفجر": "03:10", "الظهر": "12:07", "العصر": "15:49", "المغرب": "19:15", "العشاء": "20:48"},
     "2026-06-13": {"hijri": "28 ذو الحجة", "الفجر": "03:10", "الظهر": "12:08", "العصر": "15:49", "المغرب": "19:16", "العشاء": "20:49"},
     "2026-06-14": {"hijri": "29 ذو الحجة", "الفجر": "03:10", "الظهر": "12:08", "العصر": "15:50", "المغرب": "19:16", "العشاء": "20:49"},
     "2026-06-15": {"hijri": "30 ذو الحجة", "الفجر": "03:10", "الظهر": "12:08", "العصر": "15:50", "المغرب": "19:17", "العشاء": "20:50"}
@@ -124,7 +126,7 @@ def get_prayer_text():
         f"⚠️ تنبيهات الأذان وقبل الأذان بـ 10 دقائق تصلك تلقائياً."
     )
 
-# --- محرك التنبيهات والأذكار المجدولة بالثانية ---
+# --- محرك التنبيهات والأذكار ---
 async def prayer_alert_engine(application: Application):
     notified_before = {}
     notified_azan = {}
@@ -141,7 +143,7 @@ async def prayer_alert_engine(application: Application):
 
             current_subs = load_subscribers()
 
-            # 1. إرسال أذكار الصباح كاملة تلقائياً الساعة 7:00 صباحاً
+            # 1. تذكير أذكار الصباح 7:00 صباحاً
             if now_str == "07:00" and last_sabah_date != date_key:
                 for uid in list(current_subs):
                     try: await application.bot.send_message(uid, TXT_AZKAR_SABAH, parse_mode="Markdown")
@@ -151,7 +153,7 @@ async def prayer_alert_engine(application: Application):
             if date_key in PRAYER_DATABASE:
                 day_data = PRAYER_DATABASE[date_key]
                 
-                # 2. إرسال أذكار المساء كاملة قبل أذان المغرب بـ 20 دقيقة
+                # 2. تذكير أذكار المساء قبل المغرب بـ 20 دقيقة
                 maghrib_time_obj = datetime.strptime(day_data["المغرب"], "%H:%M")
                 massa_time_obj = datetime.combine(datetime.today(), maghrib_time_obj.time()) - timedelta(minutes=20)
                 massa_time_str = massa_time_obj.strftime("%H:%M")
@@ -162,19 +164,7 @@ async def prayer_alert_engine(application: Application):
                         except: pass
                     last_massa_date = date_key
 
-                # تنبيهات ذو الحجة وعرفة وعيد الأضحى المبارك
-                if day_data['hijri'] == "8 ذو الحجة" and now_str == "20:00" and not arafah_alert_sent:
-                    for uid in list(current_subs):
-                        try: await application.bot.send_message(uid, "🌙 *تذكير عظيم:* غداً هو يوم عرفة، صيام هذا اليوم يكفر السنة الماضية والباقية.", parse_mode="Markdown")
-                        except: pass
-                    arafah_alert_sent = True
-                    
-                if day_data['hijri'] == "9 ذو الحجة" and now_str == "05:00":
-                    for uid in list(current_subs):
-                        try: await application.bot.send_message(uid, "🕋 *أقبل يوم عرفة:* خير الدعاء دعاء يوم عرفة، أكثروا من ذكره والدعاء لشفاء المرضى.", parse_mode="Markdown")
-                        except: pass
-
-                # تنبيهات الصلوات الرسمية (قبل بـ 10 دقائق ووقت الأذان)
+                # تنبيهات الأذان وقبل بـ 10 دقائق
                 for name in ["الفجر", "الظهر", "العصر", "المغرب", "العشاء"]:
                     p_time = day_data[name]
                     p_time_obj = datetime.strptime(p_time, "%H:%M")
@@ -193,7 +183,7 @@ async def prayer_alert_engine(application: Application):
                             except: pass
                         notified_azan[name] = date_key
 
-            # 3. إرسال الأدعية المجدولة في أوقاتك الدقيقة الستة
+            # 3. إرسال الأدعية في الأوقات الستة المحددة
             target_dua_times = ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00"]
             current_dua_key = f"{date_key}-{now_str}"
             
@@ -209,13 +199,13 @@ async def prayer_alert_engine(application: Application):
 
         await asyncio.sleep(10)
 
-# --- الواجهة الرئيسية بالأزرار المحدثة والصافية ---
+# --- الواجهة الرئيسية ---
 def get_main_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⏱️ المواقيت الدقيقة للجدول", callback_data='prayer')],
         [InlineKeyboardButton("☀️ أذكار الصباح والمساء", callback_data='azkar')],
         [InlineKeyboardButton("🤲 أدعية الشفاء والهم", callback_data='duas')],
-        [InlineKeyboardButton("🕋 اتجاه القِبلة في بغداد", callback_data='qibla')] # زر القبلة الجديد
+        [InlineKeyboardButton("🕋 اتجاه القِبلة في بغداد", callback_data='qibla')]
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -223,7 +213,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_subscriber(user_id) 
     await update.message.reply_text(TXT_WELCOME, parse_mode="Markdown", reply_markup=get_main_keyboard())
 
-# --- الأمر السري المخصص لآيدي حسابك الجديد للإحصائيات ---
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id == ADMIN_ID:
         current_subs = load_subscribers()
@@ -233,12 +222,16 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # التقاط الآيدي تلقائياً بمجرد ضغط أي مستخدم قديم على أي زر لإعادة تسجيله
+    user_id = query.from_user.id
+    save_subscriber(user_id)
+    
     back_kb = [[InlineKeyboardButton("🔙 عودة للقائمة", callback_data='main')]]
     
     if query.data == 'prayer':
         await query.edit_message_text(get_prayer_text(), parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(back_kb))
     elif query.data == 'azkar':
-        # تجميع الأذكار في عرض سريع للمستخدم عند الضغط من القائمة
         txt_combined = f"{TXT_AZKAR_SABAH}\n\n-----------\n\n{TXT_AZKAR_MASSA}"
         await query.edit_message_text(txt_combined, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(back_kb))
     elif query.data == 'duas':
@@ -251,7 +244,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def run_flask():
     app = Flask(__name__)
     @app.route('/')
-    def home(): return "Prayer Bot Permanent Subs Active"
+    def home(): return "Prayer Bot Smart Catch Active"
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
 
 if __name__ == '__main__':
