@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 BAGHDAD_TZ = pytz.timezone('Asia/Baghdad')
 
+# الرقم التعريفي لحسابك المسؤول
 ADMIN_ID = 5656787  
 SUBSCRIBERS_FILE = "subscribers.txt"
 
@@ -84,7 +85,7 @@ PRAYER_DATABASE = {
     "2026-05-28": {"hijri": "12 ذو الحجة", "الفجر": "03:16", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:07", "العشاء": "20:38"},
     "2026-05-29": {"hijri": "13 ذو الحجة", "الفجر": "03:15", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:08", "العشاء": "20:39"},
     "2026-05-30": {"hijri": "14 ذو الحجة", "الفجر": "03:14", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:09", "العشاء": "20:40"},
-    "2026-05-31": {"hijri": "15 ذو الحجة", "الفجر": "03:14", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:09", "العشاء": "20:40"}
+    "2026-05-31": {"hijri": "15 ذو الحجة", "الفجر": "03:14", "الظهر": "12:05", "Alloc": "15:47", "المغرب": "19:09", "العشاء": "20:40"}
 }
 
 def get_prayer_text():
@@ -103,7 +104,6 @@ def get_prayer_text():
         f"⚠️ تنبيهات الأذان وقبل الأذان بـ 10 دقائق تصلك تلقائياً."
     )
 
-# --- دالة التنبيهات والأذكار عبر JobQueue الخاص بالتليغرام (الأكثر استقراراً) ---
 async def scheduled_alerts_job(context: ContextTypes.DEFAULT_TYPE):
     try:
         now = datetime.now(BAGHDAD_TZ)
@@ -111,7 +111,6 @@ async def scheduled_alerts_job(context: ContextTypes.DEFAULT_TYPE):
         now_str = now.strftime("%H:%M")
         current_subs = load_subscribers()
 
-        # 1. أذكار الصباح 7:00 صباحاً
         if now_str == "07:00":
             for uid in current_subs:
                 try: await context.bot.send_message(uid, TXT_AZKAR_SABAH, parse_mode="Markdown")
@@ -120,7 +119,6 @@ async def scheduled_alerts_job(context: ContextTypes.DEFAULT_TYPE):
         if date_key in PRAYER_DATABASE:
             day_data = PRAYER_DATABASE[date_key]
             
-            # 2. أذكار المساء قبل المغرب بـ 20 دقيقة
             maghrib_time_obj = datetime.strptime(day_data["المغرب"], "%H:%M")
             massa_time_obj = datetime.combine(datetime.today(), maghrib_time_obj.time()) - timedelta(minutes=20)
             if now_str == massa_time_obj.strftime("%H:%M"):
@@ -128,7 +126,6 @@ async def scheduled_alerts_job(context: ContextTypes.DEFAULT_TYPE):
                     try: await context.bot.send_message(uid, TXT_AZKAR_MASSA, parse_mode="Markdown")
                     except: pass
 
-            # تنبيهات الأذان
             for name in ["الفجر", "الظهر", "العصر", "المغرب", "العشاء"]:
                 p_time = day_data[name]
                 p_time_obj = datetime.strptime(p_time, "%H:%M")
@@ -144,7 +141,6 @@ async def scheduled_alerts_job(context: ContextTypes.DEFAULT_TYPE):
                         try: await context.bot.send_message(uid, f"🕌 حان الآن وقت أذان *{name}* في بغداد.", parse_mode="Markdown")
                         except: pass
 
-        # 3. الأدعية الدقيقة الستة
         target_dua_times = ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00"]
         if now_str in target_dua_times:
             dua_index = target_dua_times.index(now_str) % len(DUA_LIST)
@@ -192,32 +188,29 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- دالة ويب سريعة من أجل Render ---
 app = Flask(__name__)
 @app.route('/')
-def home(): return "Prayer Bot Smart Queue Active"
+def home(): return "Prayer Bot Active"
 
 async def main():
-    # استخدام تفريغ ذكي لإجبار النسخة القديمة على التوقف (Drop pending updates)
     application = Application.builder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("stats", stats))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    # استخدام JobQueue المعتمد لتشغيل التنبيهات كل 30 ثانية بشكل متوازي آمن
     if application.job_queue:
         application.job_queue.run_repeating(scheduled_alerts_job, interval=30, first=10)
     
-    # تشغيل Flask بشكل مستقل كخلفية خفيفة
     from threading import Thread
     Thread(target=lambda: app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000))), daemon=True).start()
     
-    # تهيئة وتشغيل البوت بمسح التحديثات المعلقة لتجنب الـ Conflict تماماً
+    # التعديل الهام هنا: تهيئة وتشغيل الـ updater بشكل يبقيه مستمع للأوامر بصورة صحيحة
     await application.initialize()
     await application.start()
     await application.updater.start_polling(drop_pending_updates=True)
     
-    # إبقاء التطبيق يعمل
-    while True:
-        await asyncio.sleep(3600)
+    # المحافظة على تشغيل الـ Loop الرئيسي للبوت
+    stop_event = asyncio.Event()
+    await stop_event.wait()
 
 if __name__ == '__main__':
     try:
