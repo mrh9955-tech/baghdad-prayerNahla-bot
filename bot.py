@@ -13,7 +13,6 @@ TOKEN = "8804058766:AAH-FQxlVenlDxii1WWEuCn0_TDzRBxMKhs"
 WEBHOOK_URL = "https://baghdad-prayernahla-bot-1.onrender.com"
 BAGHDAD_TZ = pytz.timezone('Asia/Baghdad')
 
-# تهيئة البوت باستخدام مكتبة telebot المستقرة
 bot = telebot.TeleBot(TOKEN, parse_mode="Markdown")
 app = Flask(__name__)
 
@@ -53,7 +52,7 @@ DUA_LIST = [
 PRAYER_DATABASE = {
     "2026-05-24": {"hijri": "8 ذو الحجة", "الفجر": "03:19", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:05", "العشاء": "20:34"},
     "2026-05-25": {"hijri": "9 ذو الحجة", "الفجر": "03:18", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:06", "العشاء": "20:35"},  
-    "2026-05-26": {"hijri": "10 ذو الحجة", "الفجر": "03:17", "الظهر": "12:04", "العصر": "15:46", "المغرب": "19:06", "العشاء": "20:36"}, 
+    "2026-05-26": {"hijri": "10 ذو الحجة", "الفجر": "03:17", "الظهر": "12:04", "الصر": "15:46", "المغرب": "19:06", "العشاء": "20:36"}, 
     "2026-05-27": {"hijri": "11 ذو الحجة", "الفجر": "03:16", "الظهر": "12:05", "العصر": "15:46", "المغرب": "19:07", "العشاء": "20:37"},
     "2026-05-28": {"hijri": "12 ذو الحجة", "الفجر": "03:16", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:07", "العشاء": "20:38"},
     "2026-05-29": {"hijri": "13 ذو الحجة", "الفجر": "03:15", "الظهر": "12:05", "العصر": "15:47", "المغرب": "19:08", "العشاء": "20:39"},
@@ -74,10 +73,9 @@ def get_prayer_text():
         f"🎯 العصر: {day_data['العصر']}\n"
         f"🌙 المغرب: {day_data['المغرب']}\n"
         f"🌌 العشاء: {day_data['العشاء']}\n\n"
-        f"⚠️ تنبيهات الأذان وققبل الأذان بـ 10 دقائق تصلك تلقائياً."
+        f"⚠️ تنبيهات الأذان وقبل الأذان بـ 10 دقائق تصلك تلقائياً."
     )
 
-# --- كيبورد الواجهة ---
 def get_main_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
     markup.row(telebot.types.InlineKeyboardButton("⏱️ المواقيت الدقيقة للجدول", callback_data='prayer'))
@@ -91,7 +89,6 @@ def get_back_keyboard():
     markup.row(telebot.types.InlineKeyboardButton("🔙 عودة للقائمة", callback_data='main'))
     return markup
 
-# --- معالجة الأوامر والرسائل (تشتغل فوراً وبدون تعليق) ---
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     save_subscriber(message.chat.id)
@@ -117,20 +114,30 @@ def handle_query(call):
     elif call.data == 'main':
         bot.edit_message_text(TXT_WELCOME, call.message.chat.id, call.message.message_id, reply_markup=get_main_keyboard())
 
-# --- خيط الخلفية المسؤول عن الإشعارات التلقائية والتنبيهات ---
+# --- خيط الخلفية المسؤول عن الإشعارات الدقيقة لمنع التكرار ---
 def scheduler_loop():
+    last_sent_minute = ""
+    
     while True:
         try:
             now = datetime.now(BAGHDAD_TZ)
             date_key = now.strftime("%Y-%m-%d")
             now_str = now.strftime("%H:%M")
+            
+            # إذا كنا لا نزال في نفس الدقيقة التي أرسلنا فيها مسبقاً، نتخطى الفحص
+            if now_str == last_sent_minute:
+                time.sleep(10)
+                continue
+
             current_subs = load_subscribers()
+            sent_this_loop = False
 
             # أذكار الصباح
             if now_str == "07:00":
                 for uid in current_subs:
                     try: bot.send_message(uid, TXT_AZKAR_SABAH)
                     except: pass
+                sent_this_loop = True
 
             if date_key in PRAYER_DATABASE:
                 day_data = PRAYER_DATABASE[date_key]
@@ -142,8 +149,9 @@ def scheduler_loop():
                     for uid in current_subs:
                         try: bot.send_message(uid, TXT_AZKAR_MASSA)
                         except: pass
+                    sent_this_loop = True
 
-                # إشعارات الصلاة وقبل الصلاة بـ 10 دقائق
+                # إشعارات مواقيت الصلاة
                 for name in ["الفجر", "الظهر", "العصر", "المغرب", "العشاء"]:
                     p_time = day_data[name]
                     p_time_obj = datetime.strptime(p_time, "%H:%M")
@@ -153,25 +161,32 @@ def scheduler_loop():
                         for uid in current_subs:
                             try: bot.send_message(uid, f"⏳ بقي 10 دقائق على أذان *{name}* في بغداد.")
                             except: pass
+                        sent_this_loop = True
 
                     if now_str == p_time:
                         for uid in current_subs:
                             try: bot.send_message(uid, f"🕌 حان الآن وقت أذان *{name}* في بغداد.")
                             except: pass
+                        sent_this_loop = True
 
-            # أدعية الساعات الاهتزازية
+            # أدعية الساعات
             target_dua_times = ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00"]
             if now_str in target_dua_times:
                 dua_index = target_dua_times.index(now_str) % len(DUA_LIST)
                 for uid in current_subs:
                     try: bot.send_message(uid, DUA_LIST[dua_index])
                     except: pass
+                sent_this_loop = True
+
+            # إذا تم إرسال أي إشعار بنجاح، نقوم بحفظ الدقيقة الحالية لمنع التكرار
+            if sent_this_loop:
+                last_sent_minute = now_str
+
         except Exception as e:
             logging.error(f"Error in scheduler: {e}")
         
-        time.sleep(30) # فحص كل نصف دقيقة
+        time.sleep(10) # فحص متقارب وسريع لكل 10 ثوانٍ لضمان لقط الدقيقة فوراً بدون تكرار
 
-# --- سيرفر الويب واستقبال الـ Webhook مدمجين بسلاسة ---
 @app.route(f'/{TOKEN}', methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
@@ -186,12 +201,6 @@ def webhook():
     bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
     return "Prayer Bot Cloud Server is Live 100%", 200
 
-if __name__ == "__main__":
-    # تشغيل المؤقت الزمني في الخلفية بشكل آمن وطبيعي
-    sched_thread = Thread(target=scheduler_loop)
-    sched_thread.daemon = True
-    sched_thread.start()
-    
-    # تشغيل السيرفر الرئيسي
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+sched_thread = Thread(target=scheduler_loop)
+sched_thread.daemon = True
+sched_thread.start()
